@@ -7,6 +7,8 @@ import pygame
 import numpy as np
 import glm
 from ogldev.lib.ogldev_pipeline import Pipeline
+from ogldev.lib.ogldev_math_3d import PersProjInfo
+
 
 os.environ['SDL_WINDOWS_DPI_AWARENESS'] = 'permonitorv2'
 
@@ -20,13 +22,13 @@ class Scene:
         self.program = self.ctx.program(
             vertex_shader='''
                 #version 330
-                
+
                 layout (location = 0) in vec3 Position;
-                
+
                 uniform mat4 gWorld;
-                
+
                 out vec4 Color;
-                
+
                 void main()
                 {
                     gl_Position = gWorld * vec4(Position, 1.0);
@@ -55,22 +57,28 @@ class Scene:
 
         indices = np.array([0, 3, 1, 1, 3, 2, 2, 3, 0, 0, 1, 2], dtype='i4')
         self.scale = 0.0
-        self.delta = 0.001
+        self.delta = 0.1
         self.pipline = Pipeline()
         self.vbo = self.ctx.buffer(vertices.astype('f4').tobytes())
         self.ibo = self.ctx.buffer(indices)
         self.vao = self.ctx.vertex_array(self.program, [(self.vbo, '3f', 'Position')], self.ibo)
+        self.pers_proj_info = PersProjInfo(
+            fov=30.0,
+            height=800,
+            width=800,
+            z_near=1.0,
+            z_far=100.0
+        )
 
     def render(self):
         self.ctx.clear()
         self.ctx.enable(self.ctx.DEPTH_TEST)
 
         self.scale += self.delta
-
-        self.pipline.set_scale(np.sin(self.scale * 0.1))
-        self.pipline.set_world_pos((np.sin(self.scale), 0, 0))
-        self.pipline.set_rotate((np.sin(self.scale)*90, np.sin(self.scale)*90, np.sin(self.scale)*90))
-        world = self.pipline.get_world_trans()
+        self.pipline.set_world_pos((0.0, 0.0, 5.0))
+        self.pipline.set_rotate((0.0, self.scale, 0.0))
+        self.pipline.set_perspective_projection(self.pers_proj_info)
+        world = self.pipline.get_wp_trans()
         world = glm.mat4(np.ascontiguousarray(world))
         self.program['gWorld'].write(world)
 
