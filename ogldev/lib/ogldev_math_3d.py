@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass
-
+# from typing import Self
+from typing_extensions import Self
 
 @dataclass
 class PersProjInfo:
@@ -143,6 +144,79 @@ def rotate_vector(src: np.ndarray, angle: float, axis: np.ndarray):
     conjugate_q = rotation_q.conjugate()
     w = (rotation_q * src) * conjugate_q
     return np.array([w.x, w.y, w.z])
+
+
+class Vector(np.ndarray):
+    def __new__(cls, values=None):
+        vec_len = cls.vec_len()
+        if values is None:
+            values = np.zeros(vec_len)
+        assert len(values) == vec_len
+        obj = np.array(values, dtype=cls.np_type()).view(cls)
+        return obj
+
+    @classmethod
+    def vec_len(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def np_type(cls):
+        raise NotImplementedError
+
+    def normalize_(self):
+        self /= np.linalg.norm(self)
+
+    def cross(self, other: 'Vector') -> Self:
+        return np.cross(self, other).view(type(self))
+
+
+class Vector2(Vector):
+    @classmethod
+    def vec_len(cls):
+        return 2
+
+    @property
+    def x(self):
+        return self[0]
+
+    @x.setter
+    def x(self, value):
+        self[0] = value
+
+    @property
+    def y(self):
+        return self[1]
+
+    @y.setter
+    def y(self, value):
+        self[1] = value
+
+
+class Vector3(Vector2):
+    @classmethod
+    def vec_len(cls):
+        return 3
+
+    @property
+    def z(self):
+        return self[2]
+
+    @z.setter
+    def z(self, value):
+        self[2] = value
+
+
+class Vector2f(Vector2):
+    @classmethod
+    def np_type(cls):
+        return np.float32
+
+
+class Vector3f(Vector3):
+    @classmethod
+    def np_type(cls):
+        return np.float32
+
 
 
 

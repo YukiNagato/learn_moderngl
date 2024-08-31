@@ -129,6 +129,26 @@ class Camera:
         self._target = normalize(view)
         self._up = normalize(np.cross(self._target, h_axis))
 
+    def on_render(self):
+        should_update = False
+        if self._on_left_edge:
+            self._angle_h -= EDGE_STEP
+            should_update = True
+        elif self._on_right_edge:
+            self._angle_h += EDGE_STEP
+            should_update = True
+
+        if self._on_upper_edge:
+            if self._angle_v > -90.0:
+                self._angle_v -= EDGE_STEP
+                should_update = True
+        elif self._on_lower_edge:
+            if self._angle_v < 90.0:
+                self._angle_v += EDGE_STEP
+                should_update = True
+
+        if should_update:
+            self.update()
 
 
 
