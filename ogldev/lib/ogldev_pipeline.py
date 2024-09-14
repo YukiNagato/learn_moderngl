@@ -3,7 +3,7 @@ from scipy.spatial.transform import Rotation
 from dataclasses import dataclass
 from ogldev.lib.ogldev_math_3d import PersProjInfo, \
     init_camera_transform, \
-    init_translation_transform
+    init_translation_transform, init_rotation_transform
 from typing import Optional
 
 
@@ -54,9 +54,9 @@ class Pipeline(object):
 
     def get_world_trans(self):
         scale_matrix = np.diag(self._scale)
-        rot_matrix = Rotation.from_euler('xyz', self._rotation).as_matrix()
+        rot_matrix = init_rotation_transform(*self._rotation.tolist(), degree=False)[:3,:3]
         full_matrix = np.identity(4)
-        full_matrix[:3, :3] = scale_matrix @ rot_matrix
+        full_matrix[:3, :3] = rot_matrix @ scale_matrix
         full_matrix[:3, 3] = self._pos
         self._w_transformation = full_matrix
         return self._w_transformation
@@ -82,6 +82,11 @@ class Pipeline(object):
         self.get_world_trans()
         self._wp_transformation = pers_proj_trans @ self._w_transformation
         return self._wp_transformation
+
+    def get_wv_trans(self):
+        self.get_world_trans()
+        self.get_view_trans()
+        return self._v_transformation @ self._w_transformation
 
     def get_wvp_trans(self):
         self.get_world_trans()

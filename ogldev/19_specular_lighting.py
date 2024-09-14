@@ -81,30 +81,33 @@ class Scene(ICallbacks):
         self.ctx = moderngl.get_context()
         self.program = self.ctx.program(
             vertex_shader='''
-                #version 330
-                
-                layout (location = 0) in vec3 Position;
-                layout (location = 1) in vec2 TexCoord;
-                layout (location = 2) in vec3 Normal;
-                
-                uniform mat4 gWVP;
-                uniform mat4 gWorld;
-                
-                out vec2 TexCoord0;
-                out vec3 Normal0;
-                
-                void main()
-                {
-                    gl_Position = gWVP * vec4(Position, 1.0);
-                    TexCoord0 = TexCoord;
-                    Normal0 = (gWorld * vec4(Normal, 0.0)).xyz;
+                #version 330                                                                        
+                                                                                                    
+                layout (location = 0) in vec3 Position;                                             
+                layout (location = 1) in vec2 TexCoord;                                             
+                layout (location = 2) in vec3 Normal;                                               
+                                                                                                    
+                uniform mat4 gWVP;                                                                  
+                uniform mat4 gWorld;                                                                
+                                                                                                    
+                out vec2 TexCoord0;                                                                 
+                out vec3 Normal0;                                                                   
+                out vec3 WorldPos0;                                                                 
+                                                                                                    
+                void main()                                                                         
+                {                                                                                   
+                    gl_Position = gWVP * vec4(Position, 1.0);                                       
+                    TexCoord0   = TexCoord;                                                         
+                    Normal0     = (gWorld * vec4(Normal, 0.0)).xyz;                                 
+                    WorldPos0   = (gWorld * vec4(Position, 1.0)).xyz;                               
                 }
             ''',
             fragment_shader='''
-                #version 330
-                
-                in vec2 TexCoord0;
+                #version 330                                                                        
+                                                                                                    
+                in vec2 TexCoord0;                                                                  
                 in vec3 Normal0;                                                                    
+                in vec3 WorldPos0;                                                                  
                                                                                                     
                 out vec4 FragColor;                                                                 
                                                                                                     
@@ -118,28 +121,37 @@ class Scene(ICallbacks):
                                                                                                     
                 uniform DirectionalLight gDirectionalLight;                                         
                 uniform sampler2D gSampler;                                                         
+                uniform vec3 gEyeWorldPos;                                                          
+                uniform float gMatSpecularIntensity;                                                
+                uniform float gSpecularPower;                                                       
                                                                                                     
                 void main()                                                                         
                 {                                                                                   
-                    vec4 AmbientColor = vec4(gDirectionalLight.Color, 1.0f) *                       
-                                        gDirectionalLight.AmbientIntensity;                         
+                    vec4 AmbientColor = vec4(gDirectionalLight.Color * gDirectionalLight.AmbientIntensity, 1.0f);
+                    vec3 LightDirection = -gDirectionalLight.Direction;                             
+                    vec3 Normal = normalize(Normal0);                                               
                                                                                                     
-                    float DiffuseFactor = dot(normalize(Normal0), -gDirectionalLight.Direction);    
+                    float DiffuseFactor = dot(Normal, LightDirection);                              
                                                                                                     
-                    vec4 DiffuseColor;                                                              
+                    vec4 DiffuseColor  = vec4(0, 0, 0, 0);                                          
+                    vec4 SpecularColor = vec4(0, 0, 0, 0);                                          
                                                                                                     
                     if (DiffuseFactor > 0) {                                                        
-                        DiffuseColor = vec4(gDirectionalLight.Color, 1.0f) *                        
-                                       gDirectionalLight.DiffuseIntensity *                         
-                                       DiffuseFactor;                                               
-                    }                                                                               
-                    else {                                                                          
-                        DiffuseColor = vec4(0, 0, 0, 0);                                            
+                        DiffuseColor = vec4(gDirectionalLight.Color * gDirectionalLight.DiffuseIntensity * DiffuseFactor, 1.0f);
+                                                                                                    
+                        vec3 VertexToEye = normalize(gEyeWorldPos - WorldPos0);                     
+                        vec3 LightReflect = normalize(reflect(gDirectionalLight.Direction, Normal));
+                        float SpecularFactor = dot(VertexToEye, LightReflect);                      
+                        if (SpecularFactor > 0) {                                                   
+                            SpecularFactor = pow(SpecularFactor, gSpecularPower);
+                            SpecularColor = vec4(gDirectionalLight.Color * gMatSpecularIntensity * SpecularFactor, 1.0f);
+                        }                                                                           
                     }                                                                               
                                                                                                     
                     FragColor = texture2D(gSampler, TexCoord0.xy) *                                 
-                                (AmbientColor + DiffuseColor);                                      
+                                (AmbientColor + DiffuseColor + SpecularColor);                      
                 }
+
 
             ''',
         )
@@ -150,6 +162,7 @@ class Scene(ICallbacks):
             Vertex((1.0, -1.0, 0.5773), (1.0, 0.0)),
             Vertex((0.0, 1.0, 0.0), (0.5, 1.0)),
         ]
+        self.vertices = vertices
         indices = np.array([0, 3, 1, 1, 3, 2, 2, 3, 0, 0, 1, 2], dtype='i4')
         calculate_normals(vertices, indices)
         vertices = np.ascontiguousarray(np.stack(vertices).flatten())
@@ -175,9 +188,9 @@ class Scene(ICallbacks):
         self.texture = ImageTexture('ogldev/data/test.png')
         self.direction_light = DirectionalLight(
             color=Vector3f([1.0, 1.0, 1.0]),
-            ambient_intensity=0.1,
-            diffuse_intensity=0.75,
-            direction=Vector3f([1.0, 0.0, 0.0])
+            ambient_intensity=0.0,
+            diffuse_intensity=0.2,
+            direction=Vector3f([0.0, 0.0, 1.0])
         )
 
     def set_directional_light(self, light: DirectionalLight):
@@ -194,7 +207,7 @@ class Scene(ICallbacks):
         self.texture.use()
         self.camera.on_render()
         self.scale += self.delta
-        self.pipline.set_world_pos((0.0, 0.0, 1.0))
+        self.pipline.set_world_pos((0.0, 0.0, 5.0))
         self.pipline.set_rotate((0.0, self.scale, 0.0))
         self.pipline.set_camera(
             **self.camera.get_camera_dict()
@@ -209,7 +222,28 @@ class Scene(ICallbacks):
         self.program['gWorld'].write(g_world)
 
         self.set_directional_light(self.direction_light)
+        self.program['gEyeWorldPos'].write(self.camera.pos.astype('float32'))
+
+        self.program['gMatSpecularIntensity'] = 1.0
+        self.program['gSpecularPower'] = 32
+
         self.vao.render()
+
+        # vertices = self.vertices
+        # points = np.array(vertices)[:, :3]
+        # points = np.concatenate(
+        #     [
+        #         points,
+        #         np.ones_like(points[:, :1])
+        #     ],
+        #     1
+        # )
+        #
+        # wvp = self.pipline.get_wvp_trans()
+        #
+        # trans_points = points @ wvp.transpose()
+        # trans_points = trans_points[:, :3] / trans_points[:, -1:]
+        # print(trans_points)
 
     def keyboard_callback(self, key, *args, **kwargs):
         if key == pygame.K_a:

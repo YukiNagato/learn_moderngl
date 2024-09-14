@@ -5,99 +5,6 @@ from typing_extensions import Self
 from scipy.spatial.transform import Rotation, Slerp
 
 
-@dataclass
-class PersProjInfo:
-    fov: float = 0.0
-    width: float = 0.0
-    height: float = 0.0
-    z_near: float = 0.0
-    z_far: float = 0.0
-
-    def to_matrix(self):
-        m = np.identity(4)
-        ar = self.height / self.width
-        z_range = self.z_near - self.z_far
-        tan_half_fov = np.tan(np.deg2rad(self.fov / 2))
-
-        m[0][0] = 1/tan_half_fov 
-        m[0][1] = 0.0                 
-        m[0][2] = 0.0                        
-        m[0][3] = 0.0
-        
-        m[1][0] = 0.0         
-        m[1][1] = 1.0/(tan_half_fov*ar) 
-        m[1][2] = 0.0                        
-        m[1][3] = 0.0
-        
-        m[2][0] = 0.0         
-        m[2][1] = 0.0                 
-        m[2][2] = (-self.z_near - self.z_far)/z_range  
-        m[2][3] = 2.0*self.z_far*self.z_near/z_range
-        
-        m[3][0] = 0.0         
-        m[3][1] = 0.0                 
-        m[3][2] = 1.0                        
-        m[3][3] = 0.0
-        return m
-
-
-def normalize(v: np.ndarray) -> np.ndarray:
-    norm = np.linalg.norm(v)
-    if norm == 0:
-       return v
-    return v / norm
-
-
-def init_translation_transform(pos):
-    m = np.identity(4)
-    m[:3, 3] = pos
-    return m
-
-
-def init_camera_transform(target, up):
-    n = normalize(target)
-    up_norm = normalize(up)
-    u = np.cross(up_norm, n)
-    u = normalize(u)
-    v = np.cross(n, u)
-
-    m = np.identity(4)
-
-    m[0, :3] = u
-    m[1, :3] = v
-    m[2, :3] = n
-    return m
-
-
-def init_rotation_transform(x, y, z, degree=True):
-    if degree:
-        x = np.deg2rad(x)
-        y = np.deg2rad(y)
-        z = np.deg2rad(z)
-    m = np.identity(4)
-    m[0][0] = 1.0; m[0][1] = 0.0   ;  m[0][2] = 0.0    ; m[0][3] = 0.0;
-    m[1][0] = 0.0; m[1][1] = np.cos(x);  m[1][2] = np.sin(x);  m[1][3] = 0.0;
-    m[2][0] = 0.0; m[2][1] = -np.sin(x); m[2][2] = np.cos(x) ; m[2][3] = 0.0;
-    m[3][0] = 0.0; m[3][1] = 0.0   ;  m[3][2] = 0.0    ; m[3][3] = 1.0;
-    rx = m
-
-    m = np.identity(4)
-    m[0][0] = np.cos(y); m[0][1] = 0.0; m[0][2] = -np.sin(y); m[0][3] = 0.0;
-    m[1][0] = 0.0   ; m[1][1] = 1.0; m[1][2] = 0.0    ; m[1][3] = 0.0;
-    m[2][0] = np.sin(y); m[2][1] = 0.0; m[2][2] = np.cos(y) ; m[2][3] = 0.0;
-    m[3][0] = 0.0   ; m[3][1] = 0.0; m[3][2] = 0.0    ; m[3][3] = 1.0;
-    ry = m
-
-    m = np.identity(4)
-    m[0][0] = np.cos(z);  m[0][1] = np.sin(z);  m[0][2] = 0.0; m[0][3] = 0.0;
-    m[1][0] = -np.sin(z); m[1][1] = np.cos(z) ; m[1][2] = 0.0; m[1][3] = 0.0;
-    m[2][0] = 0.0   ;  m[2][1] = 0.0    ; m[2][2] = 1.0; m[2][3] = 0.0;
-    m[3][0] = 0.0   ;  m[3][1] = 0.0    ; m[3][2] = 0.0; m[3][3] = 1.0;
-    rz = m
-
-    return rz @ ry @ rx
-
-
 class Quaternion:
     def __init__(self, quat: np.ndarray):
         self.quat = quat
@@ -143,12 +50,12 @@ class Quaternion:
             pitch = np.deg2rad(pitch)
             yaw = np.deg2rad(yaw)
             roll = np.deg2rad(roll)
-        sin_pitch = np.sin(pitch/2)
-        cos_pitch = np.cos(pitch/2)
-        sin_yaw = np.sin(yaw/2)
-        cos_yaw = np.cos(yaw/2)
-        sin_roll = np.sin(roll/2)
-        cos_roll = np.cos(roll/2)
+        sin_pitch = np.sin(pitch / 2)
+        cos_pitch = np.cos(pitch / 2)
+        sin_yaw = np.sin(yaw / 2)
+        cos_yaw = np.cos(yaw / 2)
+        sin_roll = np.sin(roll / 2)
+        cos_roll = np.cos(roll / 2)
         cos_pitch_cos_yaw = cos_pitch * cos_yaw
         sin_pitch_sin_yaw = sin_pitch * sin_yaw
         x = sin_roll * cos_pitch_cos_yaw - cos_roll * sin_pitch_sin_yaw
@@ -243,7 +150,7 @@ class Vector(np.ndarray):
 
     def copy(self) -> Self:
         return super().copy().view(type(self))
-    
+
 
 class Vector2(Vector):
     @classmethod
@@ -292,6 +199,11 @@ class Vector3f(Vector3):
     def np_type(cls):
         return np.float32
 
+
+class Vector4f(Vector3f):
+    @classmethod
+    def vec_len(cls):
+        return 4
 
 
 
