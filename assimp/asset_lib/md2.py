@@ -11,6 +11,7 @@ from assimp.color import AiColor3D, AiColor4D
 from assimp.math import Vector3f, Vector4f
 from assimp.asset_lib.md2_normal_table import anorms
 from typing import ClassVar
+from assimp.base_importer import BaseImporter
 
 
 @dataclass
@@ -154,7 +155,7 @@ class TexCoords:
         return tex_coords
 
 
-class Md2:
+class Md2(BaseImporter):
     def read(self, file_path)->AiScene:
         fp = open(file_path, 'rb')
         buffers = fp.read()
@@ -168,7 +169,7 @@ class Md2:
         scene.materials = [AiMaterial()]
         mesh = AiMesh()
         scene.meshes = [mesh]
-        mesh.primitive_types = AiPrimitiveState.triangle
+        mesh.primitive_types.triangle = True
         mesh.faces = [AiFace() for _ in range(header.num_triangles)]
         mesh.vertices = [Vector3f() for _ in range(header.num_triangles * 3)]
         mesh.normals = [Vector3f() for _ in range(header.num_triangles * 3)]
@@ -257,6 +258,12 @@ class Md2:
                 dtype=np.float32
             ).reshape((4, 4))
         return scene
+
+    def intern_read_file(self, filename):
+        return self.read(filename)
+
+    def get_extension_list(self):
+        return ['.md2']
 
 
 if __name__ == '__main__':

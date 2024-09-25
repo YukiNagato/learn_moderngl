@@ -68,6 +68,10 @@ class AiBone:
     def copy_vertex_weight(self, other: 'AiBone'):
         self.weights = deepcopy(other.weights)
 
+    @property
+    def num_weights(self) -> int:
+        return len(self.weights)
+
     def __eq__(self, other: 'AiBone'):
         if self.name != other.name or len(self.weights) != len(other.weights):
             return False
@@ -81,12 +85,40 @@ class AiBone:
 @dataclass
 class AiAnimMesh:
     name: str = ''
-    vertices: List[np.ndarray] = field(default_factory=list)
-    normals: List[np.ndarray] = field(default_factory=list)
-    tangents: List[np.ndarray] = field(default_factory=list)
-    colors: List[np.ndarray] = field(default_factory=list)
-    texture_coords: List[np.ndarray] = field(default_factory=list)
+    vertices: List[Vector3f] = field(default_factory=list)
+    normals: List[Vector3f] = field(default_factory=list)
+    tangents: List[Vector3f] = field(default_factory=list)
+    bi_tangents: List[Vector3f] = field(default_factory=list)
+    colors: List[List[AiColor4D]] = field(default_factory=list)
+    texture_coords: List[List[Vector3f]] = field(default_factory=list)
     weight: float = 0
+
+    @property
+    def num_vertices(self):
+        return len(self.vertices)
+
+    def has_positions(self):
+        return len(self.vertices) > 0
+
+    def has_normals(self):
+        return len(self.normals) > 0
+
+    def has_tangents_and_bi_tangents(self):
+        return len(self.tangents) > 0
+
+    def has_vertex_colors(self, index):
+        return len(self.colors) > index and self.colors[index] is not None and self.has_positions()
+
+    def has_texture_coords(self, index):
+        return len(self.texture_coords) > index and self.texture_coords[index] is not None and self.has_positions()
+
+    @property
+    def vertex_colors_cnt(self):
+        return len(self.colors)
+
+    @property
+    def texture_coords_cnt(self):
+        return len(self.texture_coords)
 
 
 @dataclass
@@ -97,7 +129,7 @@ class AiMesh:
     normals: List[Vector3f] = field(default_factory=list)
     tangents: List[Vector3f] = field(default_factory=list)
     bi_tangents: List[Vector3f] = field(default_factory=list)
-    colors: List[List[Vector3f]] = field(default_factory=list)
+    colors: List[List[AiColor4D]] = field(default_factory=list)
     texture_coords: List[List[Vector3f]] = field(default_factory=list)
     num_uv_components: List[int] = field(default_factory=list)
     faces: List[AiFace] = field(default_factory=list)
@@ -115,6 +147,14 @@ class AiMesh:
     @property
     def num_faces(self):
         return len(self.faces)
+
+    @property
+    def num_anim_meshes(self):
+        return len(self.anim_meshes)
+
+    @property
+    def num_bones(self):
+        return len(self.bones)
 
     def has_positions(self):
         return len(self.vertices) > 0
@@ -136,6 +176,14 @@ class AiMesh:
 
     def has_texture_coords(self, index):
         return len(self.texture_coords) > index and self.texture_coords[index] is not None and self.has_positions()
+
+    @property
+    def vertex_colors_cnt(self):
+        return len(self.colors)
+
+    @property
+    def texture_coords_cnt(self):
+        return len(self.texture_coords)
 
     def get_num_uv_channels(self):
         n = 0

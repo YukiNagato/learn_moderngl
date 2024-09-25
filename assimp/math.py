@@ -144,6 +144,13 @@ class Vector(np.ndarray):
 
     def normalize_(self):
         self /= np.linalg.norm(self)
+        return self
+
+    def normalize_safe_(self):
+        len = np.linalg.norm(self)
+        if len > 0:
+            self /= len
+        return self
 
     def cross(self, other: 'Vector') -> Self:
         return np.cross(self, other).view(type(self))
@@ -198,6 +205,35 @@ class Vector3f(Vector3):
     @classmethod
     def np_type(cls):
         return np.float32
+
+    def __lt__(self, other):
+        if self.x != other.x:
+            return self.x < other.x
+        else:
+            if self.y != other.y:
+                return self.y < other.y
+            else:
+                return self.z < other.z
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y and self.z == other.z
+
+    def __le__(self, other):
+        if self.x <= other.x:
+            return True
+        elif self.y <= other.y:
+            return True
+        else:
+            return self.z <= other.z
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __gt__(self, other):
+        return not self.__le__(other)
+
+    def __ge__(self, other):
+        return not self.__lt__(other)
 
 
 class Vector4f(Vector3f):

@@ -14,11 +14,12 @@ from ogldev.lib.ogldev_math_3d import Vector3f, Vector2f, Vector
 from ogldev.lib.ogldev_callbacks import ICallbacks
 from ogldev.lib.pygame_backend import PyGameBackend
 from typing import List
-from assimp.asset_lib.md2 import Md2
+from assimp.importer import Importer
 from assimp.scene import AiScene, AiMesh, AiMaterial
 from assimp.material import AiTextureType
 from ogldev.lib.ogldev_basic_lighting import BasicLightingTechnique
 from ogldev.lib import DATA_DIR
+from ogldev.lib.ogldev_util import ASSIMP_LOAD_FLAGS
 
 
 class ImageTexture:
@@ -100,7 +101,7 @@ class Mesh:
         self.textures = []
 
     def load_mesh(self, filename: str):
-        scene = Md2().read(filename)
+        scene = Importer().read_file(filename, ASSIMP_LOAD_FLAGS)
         self.init_from_scene(scene, filename)
 
     def init_from_scene(self, scene: AiScene, filename: str):
@@ -149,27 +150,6 @@ class Mesh:
             face = mesh.faces[i]
             assert face.num_indices == 3
             indices += face.indices
-
-        # import matplotlib.pyplot as plt
-        # vertices = np.array(vertices)
-        #
-        # # vertices = vertices[2000:3000]
-        # # idx = 830
-        # # vertices = vertices[2000:3000]
-        # # vertices = vertices[idx*3:idx*3+3]
-        # fig = plt.figure()
-        # ax = fig.add_subplot(projection='3d')
-        # ax.set_xlim([-100, 100])
-        # ax.set_ylim([-100, 100])
-        # ax.set_zlim([-100, 100])
-        # ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], marker='o')
-        #
-        # plt.show()
-
-        # import open3d as o3d
-        # mesh_np = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(np.array(vertices)[:, :3]),
-        #                                     o3d.utility.Vector3iVector(np.array(indices).reshape((-1, 3))))
-        # o3d.visualization.draw_geometries([mesh_np])
 
         entry.init(vertices, indices)
         entry.vertex_array(self.program)
@@ -225,7 +205,7 @@ class Scene(ICallbacks):
         self.ctx.enable(self.ctx.DEPTH_TEST)
 
         self.scale += 0.5
-        # self.camera.on_render()
+        self.camera.on_render()
         self.mesh.use()
 
         pl = [PointLight() for _ in range(2)]
@@ -270,51 +250,8 @@ class Scene(ICallbacks):
 
         self.mesh.render()
 
-        # vertices = self.mesh.entries[0].vertices
-        # # #
-        # points = np.array(vertices)[:, :3]
-        # # # print(points)
-        # points = np.concatenate(
-        #     [
-        #         points,
-        #         np.ones_like(points[:, :1])
-        #     ],
-        #     1
-        # )
-        # wvp = self.pipeline.get_wvp_trans()
-        # trans_points = points @ wvp.transpose()
-        # trans_points = trans_points[:, :3] / trans_points[:, -1:]
-        #
-        # import matplotlib.pyplot as plt
-        # fig = plt.figure()
-        # ax = fig.add_subplot(projection='3d')
-        # ax.set_xlim([-1, 1])
-        # ax.set_ylim([-1, 1])
-        # ax.set_zlim([-1, 1])
-        # ax.scatter(trans_points[:, 0], trans_points[:, 1], trans_points[:, 2], marker='o')
-        # plt.show()
-        # # print(trans_points)
-        # # pass
-        #
-        # def debug_print(array):
-        #     print('[')
-        #     for row in array:
-        #         print('[' + ', '.join(map(str, row)) + '],')
-        #     print(']')
-        #
-        # debug_print(trans_points)
-        #
-        # import matplotlib.pyplot as plt
-        # plt.plot(points[:, 0], points[:, 1], '.')
-        # plt.show()
-
-
 
 if __name__ == '__main__':
     backend = PyGameBackend(height=HEIGHT, width=WIDTH)
-    # Scene()
     backend.run(Scene())
-    #
-    # Scene()
-
 
